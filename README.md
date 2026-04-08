@@ -38,10 +38,13 @@ az vm create \
   --image Ubuntu2204 \
   --admin-username azureuser \
   --generate-ssh-keys
+  
 2.Open Ports
   az vm open-port --port 80 --resource-group myRG --name supachatVM
+  
 3. SSH into VM
  ssh azureuser@<public-ip>
+ 
 4. Install Docker
 5. Clone repo
 6. Run:
