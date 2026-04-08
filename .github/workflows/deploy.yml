@@ -1,22 +1,56 @@
-name: Deploy to Azure VM
-
+name: Build & Deploy to Azure VM
 on:
   push:
     branches: [ main ]
-
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-    - name: SSH Deploy
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    #  Login to DockerHub
+    - name: Docker Login
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    #  Build & Push Backend
+    - name: Build Backend Image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/supachat-backend ./backend -f docker/backend.Dockerfile
+        docker push ${{ secrets.DOCKER_USERNAME }}/supachat-backend
+
+    #   Build & Push Frontend
+    - name: Build Frontend Image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/supachat-frontend ./frontend -f docker/frontend.Dockerfile
+        docker push ${{ secrets.DOCKER_USERNAME }}/supachat-frontend
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to Azure VM via SSH
       uses: appleboy/ssh-action@v0.1.6
       with:
         host: ${{ secrets.VM_IP }}
         username: azureuser
         key: ${{ secrets.SSH_KEY }}
         script: |
-          cd supachat-app
-          git pull
-          docker-compose down
-          docker-compose up -d --build
+          docker pull ${{ secrets.DOCKER_USERNAME }}/supachat-backend
+          docker pull ${{ secrets.DOCKER_USERNAME }}/supachat-frontend
+
+          docker stop supachat-backend || true
+          docker stop supachat-frontend || true
+
+          docker rm supachat-backend || true
+          docker rm supachat-frontend || true
+
+          docker run -d --name supachat-backend -p 8000:8000 ${{ secrets.DOCKER_USERNAME }}/supachat-backend
+          docker run -d --name supachat-frontend -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/supachat-frontend
+
+          docker restart nginx || true
