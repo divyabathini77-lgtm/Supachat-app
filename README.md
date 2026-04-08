@@ -29,11 +29,22 @@ Access:
 
 ## ☁️ Azure Deployment
 
-1. Create VM
-2. SSH into VM
-3. Install Docker
-4. Clone repo
-5. Run:
+1. Create VM Using azure CLI
+   az login
+
+az vm create \
+  --resource-group myRG \
+  --name supachatVM \
+  --image Ubuntu2204 \
+  --admin-username azureuser \
+  --generate-ssh-keys
+2.Open Ports
+  az vm open-port --port 80 --resource-group myRG --name supachatVM
+3. SSH into VM
+ ssh azureuser@<public-ip>
+4. Install Docker
+5. Clone repo
+6. Run:
    docker-compose up -d
 
 ---
